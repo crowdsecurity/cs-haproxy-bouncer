@@ -95,6 +95,7 @@ local function refresh_decisions(is_startup)
     -- TODO: move backend name and server name into config
     local link = "http://" .. core.backends["crowdsec"].servers["crowdsec"]:get_addr() .. "/v1/decisions/stream?startup=" .. tostring(is_startup)
 
+    core.Debug("Start fetching decisions: startup="..tostring(is_startup))
     response, err = http.get{url=link, headers={
             ["X-Api-Key"]=runtime.conf["API_KEY"],
             ["Connection"]="keep-alive",
@@ -104,6 +105,7 @@ local function refresh_decisions(is_startup)
         core.Alert("Got error "..err)
         return false
     end
+    core.Debug("Decisions fetched: startup="..tostring(is_startup))
 
     local body = response.content
     local decisions = json.decode(body)
@@ -112,22 +114,12 @@ local function refresh_decisions(is_startup)
         return true
     end
 
-    local admin_socket = core.tcp()
-    if admin_socket:connect(runtime.conf["HAPROXY_ADMIN_IP"], runtime.conf["HAPROXY_ADMIN_PORT"]) == nil then
-        core.Alert("Could not connect to admin socket: "..runtime.conf["HAPROXY_ADMIN_IP"]..":"..runtime.conf["HAPROXY_ADMIN_PORT"])
-        return false
-    end
     -- process deleted decisions
     if type(decisions.deleted) == "table" then
       if not is_startup then
         for i, decision in pairs(decisions.deleted) do
             core.Debug("Delete decision "..decision.value)
-            local result, err, last_byte = admin_socket:send("del map "..runtime.conf["MAP_PATH"].." "..decision.value.."\r\n")
-            if result == nil then
-                core.Alert("Error deleting decision: "..decision.value.."; Error: "..err)
-                admin_socket:close()
-                return false
-            end
+            core.del_map(runtime.conf["MAP_PATH"], decision.value)
         end
       end
     end
@@ -136,17 +128,11 @@ local function refresh_decisions(is_startup)
     if type(decisions.new) == "table" then
       for i, decision in pairs(decisions.new) do
         if runtime.conf["BOUNCING_ON_TYPE"] == decision.type or runtime.conf["BOUNCING_ON_TYPE"] == "all" then
-            core.Info("Add decision "..decision.value)
-            local result, err, last_byte = admin_socket:send("add map "..runtime.conf["MAP_PATH"].." "..decision.value.." "..decision.type.."\r\n")
-            if result == nil then
-                core.Debug("Error adding decision: "..decision.value.."; Error: "..err)
-                admin_socket:close()
-                return false
-            end
+            core.Debug("Add decision "..decision.value)
+            core.set_map(runtime.conf["MAP_PATH"], decision.value, decision.type)
         end
       end
     end
-    admin_socket:close()
   
     return true
 end
