@@ -7,8 +7,6 @@ local recaptcha = require "plugins.crowdsec.recaptcha"
 
 local runtime = {}
 
-local captchas = {}
-
 -- Called after the configuration is parsed.
 -- Loads the configuration
 local function init()
@@ -19,7 +17,7 @@ local function init()
         return nil
     end
     runtime.conf = conf
-    -- TODO: check crowdsec & google backends config
+    -- TODO: check crowdsec & captcha_verifier backends config
 
     runtime.captcha_ok = true
     local err = recaptcha.New(runtime.conf["SITE_KEY"], runtime.conf["SECRET_KEY"], runtime.conf["CAPTCHA_TEMPLATE_PATH"])
@@ -41,35 +39,31 @@ local function allow(txn)
     local remediation = runtime.map:lookup(source_ip)
 
     if remediation == "captcha" then
-        -- TODO: still ban if accept is not text/html to avoid serving html when the client expect image or json
-        if captchas[source_ip] ~= nil then
-            remediation = nil
-        else
-            -- captcha response ?
-            if txn.f:method() == "POST" then
-                local recaptcha_resp = txn.sf:req_body_param("g-recaptcha-response")
-                if recaptcha_resp ~= "" then
-                    -- TODO: move backend name and server name into config
-                    valid, err = recaptcha.Validate(recaptcha_resp, source_ip, core.backends["google"].servers["google"]:get_addr())
-                    if err then
-                        core.Alert("error validating captcha: "..err.."; validator: "..core.backends["google"].servers["google"]:get_addr())
-                    end
-                    if valid then
-                        -- valid, redirect to redirectUri
-                        -- TODO: get correct redirect uri from query param if provided
-                        remediation = nil
-                        captchas[source_ip] = true
-                        local reply = txn:reply{
-                            status=302,
-                            headers={
-                                ["Location"]={"/"}
-                            }
-                        }
-                        txn:done(reply)
-                    end
-                end
+        local stk = core.frontends[txn.f:fe_name()].stktable
+        if stk == nil then
+            core.Alert("Stick table not defined in frontend "..txn.f:fe_name()..". Cannot cache captcha verifications")
+            txn:set_var("req.remediation", "ban")
+            return nil
+        end
+        if stk:lookup(source_ip) ~= nil then
+            txn:set_var("req.remediation", nil)
+            return nil
+        end
+        -- captcha response ?
+        local recaptcha_resp = txn.sf:req_body_param("g-recaptcha-response")
+        if recaptcha_resp ~= "" then
+            valid, err = recaptcha.Validate(recaptcha_resp, source_ip, core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr())
+            if err then
+                core.Alert("error validating captcha: "..err.."; validator: "..core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr())
             end
-        end 
+            if valid then
+                -- valid, redirect to redirectUri
+                -- TODO: get correct redirect uri from query param if provided
+                remediation = "captcha-allow"
+            else
+                remediation = "ban"
+            end
+        end
     end
 
     txn:set_var("req.remediation", remediation)
@@ -78,6 +72,7 @@ end
 -- Service implementation
 -- respond with captcha template
 local function reply_captcha(applet)
+    -- TODO: still ban if accept is not text/html to avoid serving html when the client expect image or json
     -- TODO: replace redirectUri in template with actual request_uri
     response = recaptcha.GetTemplate()
     applet:set_status(200)
@@ -92,7 +87,6 @@ end
 local function refresh_decisions(is_startup)
     core.Debug("Stream Query with startup "..tostring(is_startup))
     -- TODO: get protocol from config
-    -- TODO: move backend name and server name into config
     local link = "http://" .. core.backends["crowdsec"].servers["crowdsec"]:get_addr() .. "/v1/decisions/stream?startup=" .. tostring(is_startup)
 
     core.Debug("Start fetching decisions: startup="..tostring(is_startup))
