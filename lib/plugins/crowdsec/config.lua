@@ -8,7 +8,7 @@ function config.file_exists(file)
     return f ~= nil
 end
 
-  function split(s, delimiter)
+function split(s, delimiter)
     result = {};
     for match in (s..delimiter):gmatch("(.-)"..delimiter.."(.-)") do
         table.insert(result, match);
@@ -40,7 +40,7 @@ function config.loadConfig(file)
         return nil, "File ".. file .." doesn't exist"
     end
     local conf = {}
-    local valid_params = {'ENABLED','API_URL', 'API_KEY', 'MAP_PATH', 'HAPROXY_ADMIN_IP', 'BOUNCING_ON_TYPE', 'MODE', 'SECRET_KEY', 'SITE_KEY', 'BAN_TEMPLATE_PATH' ,'CAPTCHA_TEMPLATE_PATH', 'REDIRECT_LOCATION', 'RET_CODE', 'EXCLUDE_LOCATION', 'FALLBACK_REMEDIATION'}
+    local valid_params = {'ENABLED', 'API_URL', 'API_KEY', 'MAP_PATH', 'BOUNCING_ON_TYPE', 'MODE', 'SECRET_KEY', 'SITE_KEY', 'BAN_TEMPLATE_PATH' ,'CAPTCHA_TEMPLATE_PATH', 'REDIRECT_LOCATION', 'RET_CODE', 'EXCLUDE_LOCATION', 'FALLBACK_REMEDIATION'}
     local valid_int_params = {'HAPROXY_ADMIN_PORT', 'CACHE_EXPIRATION', 'CACHE_SIZE', 'REQUEST_TIMEOUT', 'UPDATE_FREQUENCY', 'CAPTCHA_EXPIRATION'}
     local valid_bouncing_on_type_values = {'ban', 'captcha', 'all'}
     local valid_truefalse_values = {'false', 'true'}
@@ -70,21 +70,21 @@ function config.loadConfig(file)
                     if v == "ENABLED" then
                         local value = s[2]
                         if not has_value(valid_truefalse_values, s[2]) then
-                            ngx.log(ngx.ERR, "unsupported value '" .. s[2] .. "' for variable '" .. v .. "'. Using default value 'true' instead")
+                            core.Alert("unsupported value '" .. s[2] .. "' for variable '" .. v .. "'. Using default value 'true' instead")
                             break
                         end
                     end
                     if v == "BOUNCING_ON_TYPE" then
                         local value = s[2]
                         if not has_value(valid_bouncing_on_type_values, s[2]) then
-                            ngx.log(ngx.ERR, "unsupported value '" .. s[2] .. "' for variable '" .. v .. "'. Using default value 'ban' instead")
+                            core.Alert("unsupported value '" .. s[2] .. "' for variable '" .. v .. "'. Using default value 'ban' instead")
                             break
                         end
                     end
                     if v == "MODE" then
                         local value = s[2]
                         if not has_value({'stream', 'live'}, s[2]) then
-                            ngx.log(ngx.ERR, "unsupported value '" .. s[2] .. "' for variable '" .. v .. "'. Using default value 'stream' instead")
+                            core.Alert("unsupported value '" .. s[2] .. "' for variable '" .. v .. "'. Using default value 'stream' instead")
                             break
                         end
                     end
@@ -103,7 +103,7 @@ function config.loadConfig(file)
                     if v == "FALLBACK_REMEDIATION" then
                         local value = s[2]
                         if not has_value({'captcha', 'ban'}, s[2]) then
-                            ngx.log(ngx.ERR, "unsupported value '" .. s[2] .. "' for variable '" .. v .. "'. Using default value 'ban' instead")
+                            core.Alert("unsupported value '" .. s[2] .. "' for variable '" .. v .. "'. Using default value 'ban' instead")
                             local n = next(s, k)
                             conf[v] = "ban"
                             break
@@ -117,7 +117,7 @@ function config.loadConfig(file)
                     conf[v] = tonumber(s[n])
                     break
                 else
-                    ngx.log(ngx.ERR, "unsupported configuration '" .. v .. "'")
+                    core.Alert("unsupported configuration '" .. v .. "'")
                     break
                 end
             end

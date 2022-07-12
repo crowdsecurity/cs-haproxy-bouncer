@@ -2,7 +2,6 @@ package.path = package.path .. ";./?.lua"
 
 local config = require "plugins.crowdsec.config"
 local json = require "json"
-local http = require "http"
 local recaptcha = require "plugins.crowdsec.recaptcha"
 
 local runtime = {}
@@ -28,7 +27,13 @@ local function init()
 
     runtime.map = Map.new(conf["MAP_PATH"], Map._ip)
 end
-  
+ 
+local function urldecode (str)
+    str = string.gsub (str, "+", " ")
+    str = string.gsub (str, "%%(%x%x)", function(h) return string.char(tonumber(h,16)) end)
+    return str
+end
+
 -- Called for each request
 -- check the blocklists and decide of the remediation
 local function allow(txn)
@@ -39,6 +44,7 @@ local function allow(txn)
     local remediation = runtime.map:lookup(source_ip)
 
     if remediation == "captcha" then
+        -- TODO: still ban if accept is not text/html to avoid serving html when the client expect image or json
         local stk = core.frontends[txn.f:fe_name()].stktable
         if stk == nil then
             core.Alert("Stick table not defined in frontend "..txn.f:fe_name()..". Cannot cache captcha verifications")
@@ -52,13 +58,13 @@ local function allow(txn)
         -- captcha response ?
         local recaptcha_resp = txn.sf:req_body_param("g-recaptcha-response")
         if recaptcha_resp ~= "" then
-            valid, err = recaptcha.Validate(recaptcha_resp, source_ip, core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr())
+            valid, err = recaptcha.Validate(recaptcha_resp, source_ip)
             if err then
                 core.Alert("error validating captcha: "..err.."; validator: "..core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr())
             end
             if valid then
                 -- valid, redirect to redirectUri
-                -- TODO: get correct redirect uri from query param if provided
+                txn:set_var("req.redirect_uri", urldecode(txn.sf:req_body_param("redirect_uri")))
                 remediation = "captcha-allow"
             else
                 remediation = "ban"
@@ -72,9 +78,7 @@ end
 -- Service implementation
 -- respond with captcha template
 local function reply_captcha(applet)
-    -- TODO: still ban if accept is not text/html to avoid serving html when the client expect image or json
-    -- TODO: replace redirectUri in template with actual request_uri
-    response = recaptcha.GetTemplate()
+    local response = recaptcha.GetTemplate({["redirect_uri"]=applet.path})
     applet:set_status(200)
     applet:add_header("content-length", string.len(response))
     applet:add_header("content-type", "text/html")
@@ -90,18 +94,26 @@ local function refresh_decisions(is_startup)
     local link = "http://" .. core.backends["crowdsec"].servers["crowdsec"]:get_addr() .. "/v1/decisions/stream?startup=" .. tostring(is_startup)
 
     core.Debug("Start fetching decisions: startup="..tostring(is_startup))
-    response, err = http.get{url=link, headers={
-            ["X-Api-Key"]=runtime.conf["API_KEY"],
-            ["Connection"]="keep-alive",
-            ["User-Agent"]="HAProxy"
-        }}
-    if err then
-        core.Alert("Got error "..err)
+    local response = core.httpclient():get{
+        url=link,
+        headers={
+            ["X-Api-Key"]={runtime.conf["API_KEY"]},
+            ["Connection"]={"keep-alive"},
+            ["User-Agent"]={"HAProxy"}
+        },
+        timeout=2*60*1000
+    }
+    if response == nil then
+        core.Alert("Got error fetching decisions from Crowdsec (unknown)")
         return false
     end
+    if response == nil or response.status ~= 200 then
+        core.Alert("Got error fetching decisions from Crowdsec: "..response.status.." ("..response.body..")")
+        return false
+    end
+    local body = response.body
     core.Debug("Decisions fetched: startup="..tostring(is_startup))
 
-    local body = response.content
     local decisions = json.decode(body)
 
     if decisions.deleted == nil and decisions.new == nil then

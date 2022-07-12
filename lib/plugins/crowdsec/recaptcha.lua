@@ -1,4 +1,3 @@
-local http = require "http"
 local json = require "json"
 local template = require "plugins.crowdsec.template"
 local utils = require "plugins.crowdsec.utils"
@@ -30,8 +29,6 @@ function M.GetStateID(state)
     return nil
 end
 
-
-
 function M.New(siteKey, secretKey, TemplateFilePath)
 
     if siteKey == nil or siteKey == "" then
@@ -42,8 +39,14 @@ function M.New(siteKey, secretKey, TemplateFilePath)
     if secretKey == nil or secretKey == "" then
       return "no recaptcha secret key provided, can't use recaptcha"
     end
-
     M.SecretKey = secretKey
+
+    if core.backends["captcha_verifier"] == nil then
+      return "no verifier backend provided, can't use recaptcha"
+    end
+    if core.backends["captcha_verifier"].servers["captcha_verifier"] == nil then
+      return "no verifier backend provided, can't use recaptcha"
+    end
 
     if TemplateFilePath == nil then
       return "CAPTCHA_TEMPLATE_PATH variable is empty, will ban without template"
@@ -56,20 +59,16 @@ function M.New(siteKey, secretKey, TemplateFilePath)
     if captcha_template == nil then
         return "Template file " .. TemplateFilePath .. "not found."
     end
-
-    local template_data = {}
-    template_data["recaptcha_site_key"] =  M.SiteKey
-    local view = template.compile(captcha_template, template_data)
-    M.Template = view
+    M.Template = captcha_template
 
     return nil
 end
 
-
-function M.GetTemplate()
-    return M.Template
+function M.GetTemplate(template_data)
+  template_data["recaptcha_site_key"] =  M.SiteKey
+  local view = template.compile(M.Template, template_data)
+  return view
 end
-
 
 function table_to_encoded_url(args)
     local params = {}
@@ -77,27 +76,36 @@ function table_to_encoded_url(args)
     return table.concat(params, "&")
 end
 
-function M.Validate(g_captcha_res, remote_ip, verifier_ip)
+function M.Validate(g_captcha_res, remote_ip)
     local body = {
         secret   = M.SecretKey,
         response = g_captcha_res,
         remoteip = remote_ip
     }
 
+    local verifier_ip = core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr()
     local data = table_to_encoded_url(body)
-    local res, err = http.post{
-        url="https://"..verifier_ip..recaptcha_verify_path,
-        data=data,
-        headers={
-            ["Content-Type"] = "application/x-www-form-urlencoded",
-        },
-        timeout=2000
-    }
-    if err ~= nil then
-        return false, err
+    local status, res = pcall(function()
+      return core.httpclient():post{
+          url="https://"..verifier_ip..recaptcha_verify_path,
+          body=data,
+          headers={
+              ["Host"] = {"www.google.com"},
+              ["Content-Type"] = {"application/x-www-form-urlencoded"},
+          },
+          timeout=2000
+      }
+    end)
+    if status == false then
+      core.Alert("error verifying captcha: "..res.."; verifier: "..verifier_ip)
+      return false, res
     end
 
-    local result = json.decode(res.content)
+    if res.status ~= 200 then
+      core.Alert("error verifying captcha: "..res.status..","..res.body.."; verifier: "..verifier_ip)
+      return false, res.body
+    end
+    local result = json.decode(res.body)
 
     if result.success == false then
       for k, v in pairs(result["error-codes"]) do
