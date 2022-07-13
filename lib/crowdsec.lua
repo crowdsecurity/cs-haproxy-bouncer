@@ -1,8 +1,10 @@
 package.path = package.path .. ";./?.lua"
 
-local config = require "plugins.crowdsec.config"
 local json = require "json"
+local config = require "plugins.crowdsec.config"
 local recaptcha = require "plugins.crowdsec.recaptcha"
+local ban = require "plugins.crowdsec.ban"
+local utils = require "plugins.crowdsec.utils"
 
 local runtime = {}
 
@@ -16,8 +18,15 @@ local function init()
         return nil
     end
     runtime.conf = conf
-    -- TODO: check crowdsec & captcha_verifier backends config
+    runtime.fallback = runtime.conf["FALLBACK_REMEDIATION"] or "ban"
 
+    if core.backends["crowdsec"] == nil then
+        error("no crowdsec backend provided: crowdsec connection must be provided as backend named crowdsec")
+    end
+    if core.backends["crowdsec"].servers["crowdsec"] == nil then
+        error("no crowdsec backend provided: crowdsec connection must be provided as backend named crowdsec having a server named crowdsec")
+    end
+    
     runtime.captcha_ok = true
     local err = recaptcha.New(runtime.conf["SITE_KEY"], runtime.conf["SECRET_KEY"], runtime.conf["CAPTCHA_TEMPLATE_PATH"])
     if err ~= nil then
@@ -25,13 +34,31 @@ local function init()
       runtime.captcha_ok = false
     end
 
+    if runtime.conf["REDIRECT_LOCATION"] ~= "" then
+        table.insert(runtime.conf["EXCLUDE_LOCATION"], runtime.conf["REDIRECT_LOCATION"])
+    end
+    local err = ban.New(runtime.conf["BAN_TEMPLATE_PATH"], runtime.conf["REDIRECT_LOCATION"], runtime.conf["RET_CODE"])
+    if err ~= nil then
+      core.Alert("error loading ban plugin: " .. err)
+    end
+
     runtime.map = Map.new(conf["MAP_PATH"], Map._ip)
 end
  
-local function urldecode (str)
+local function urldecode(str)
     str = string.gsub (str, "+", " ")
     str = string.gsub (str, "%%(%x%x)", function(h) return string.char(tonumber(h,16)) end)
     return str
+end
+
+local function remediate_allow(txn)
+    txn:set_var("req.remediation", nil)
+    return nil
+end
+
+local function remediate_fallback(txn)
+    txn:set_var("req.remediation", runtime.fallback)
+    return nil
 end
 
 -- Called for each request
@@ -43,17 +70,44 @@ local function allow(txn)
 
     local remediation = runtime.map:lookup(source_ip)
 
+    if remediation == nil then
+        return remediate_allow(txn)
+    end
+
+    core.Debug("Active decision "..tostring(remediation).." for "..source_ip)
+
+    if runtime.conf["ENABLED"] == "false" then
+        return remediate_allow(txn)
+    end
+
+    -- whitelists
+    if utils.table_len(runtime.conf["EXCLUDE_LOCATION"]) > 0 then
+        for k, v in pairs(runtime.conf["EXCLUDE_LOCATION"]) do
+            if txn.sf:path() == v then
+                return remediate_allow(txn)
+            end
+            local uri_to_check = v
+            if utils.ends_with(uri_to_check, "/") == false then
+                uri_to_check = uri_to_check .. "/"
+            end
+            if utils.starts_with(txn.sf:path(), uri_to_check) then
+                return remediate_allow(txn)
+            end
+        end
+    end
+    
+    -- captcha
     if remediation == "captcha" then
-        -- TODO: still ban if accept is not text/html to avoid serving html when the client expect image or json
+        if runtime.captcha_ok == false then
+            return remediate_fallback(txn)
+        end
         local stk = core.frontends[txn.f:fe_name()].stktable
         if stk == nil then
             core.Alert("Stick table not defined in frontend "..txn.f:fe_name()..". Cannot cache captcha verifications")
-            txn:set_var("req.remediation", "ban")
-            return nil
+            return remediate_fallback(txn)
         end
         if stk:lookup(source_ip) ~= nil then
-            txn:set_var("req.remediation", nil)
-            return nil
+            return remediate_allow(txn)
         end
         -- captcha response ?
         local recaptcha_resp = txn.sf:req_body_param("g-recaptcha-response")
@@ -66,24 +120,11 @@ local function allow(txn)
                 -- valid, redirect to redirectUri
                 txn:set_var("req.redirect_uri", urldecode(txn.sf:req_body_param("redirect_uri")))
                 remediation = "captcha-allow"
-            else
-                remediation = "ban"
             end
         end
     end
 
     txn:set_var("req.remediation", remediation)
-end
-
--- Service implementation
--- respond with captcha template
-local function reply_captcha(applet)
-    local response = recaptcha.GetTemplate({["redirect_uri"]=applet.path})
-    applet:set_status(200)
-    applet:add_header("content-length", string.len(response))
-    applet:add_header("content-type", "text/html")
-    applet:start_response()
-    applet:send(response)
 end
 
 -- Called from task
@@ -99,7 +140,7 @@ local function refresh_decisions(is_startup)
         headers={
             ["X-Api-Key"]={runtime.conf["API_KEY"]},
             ["Connection"]={"keep-alive"},
-            ["User-Agent"]={"HAProxy"}
+            ["User-Agent"]={"crowdsec-haproxy-bouncer/v1.0.0"}
         },
         timeout=2*60*1000
     }
@@ -159,5 +200,6 @@ end
 -- Registers
 core.register_init(init)
 core.register_action("crowdsec_allow", { 'tcp-req', 'tcp-res', 'http-req', 'http-res' }, allow, 0)
-core.register_service("reply_captcha", "http", reply_captcha)
+core.register_service("reply_captcha", "http", recaptcha.ReplyCaptcha)
+core.register_service("reply_ban", "http", ban.ReplyBan)
 core.register_task(refresh_decisions_task)

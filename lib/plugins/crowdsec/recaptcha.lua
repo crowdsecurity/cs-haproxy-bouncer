@@ -70,7 +70,7 @@ function M.GetTemplate(template_data)
   return view
 end
 
-function table_to_encoded_url(args)
+local function table_to_encoded_url(args)
     local params = {}
     for k, v in pairs(args) do table.insert(params, k .. '=' .. v) end
     return table.concat(params, "&")
@@ -119,5 +119,23 @@ function M.Validate(g_captcha_res, remote_ip)
     return result.success, nil
 end
 
+-- Service implementation
+-- respond with captcha template
+function M.ReplyCaptcha(applet)
+  -- block if accept is not text/html to avoid serving html when the client expect image or json
+  if utils.accept_html(applet) == false then
+    applet:set_status(403)
+    applet:start_response()
+    applet:send("Access forbidden")
+    return
+  end
+
+  local response = M.GetTemplate({["redirect_uri"]=applet.path})
+  applet:set_status(200)
+  applet:add_header("content-length", string.len(response))
+  applet:add_header("content-type", "text/html")
+  applet:start_response()
+  applet:send(response)
+end
 
 return M
