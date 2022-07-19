@@ -1,0 +1,5 @@
+crowdsec-haproxy-bouncer (1.0.0) UNRELEASED; urgency=medium
+
+  * debian package
+  
+ -- Crowdsec Team <info@crowdsec.net>  Mon, 18 Jul 2022 09:38:06 +0100
