@@ -1,0 +1,27 @@
+#!/usr/bin/make -f
+
+export DEB_VERSION=$(shell dpkg-parsechangelog | egrep '^Version:' | cut -f 2 -d ' ')
+export BUILD_VERSION=v${DEB_VERSION}-debian-pragmatic
+
+
+%:
+	dh $@
+
+override_dh_systemd_start:
+	echo "Not running dh_systemd_start"
+override_dh_auto_test:
+override_dh_auto_build:
+override_dh_auto_install:
+	mkdir -p debian/crowdsec-haproxy-bouncer/usr/share/crowdsec-haproxy-bouncer/
+
+	mkdir -p debian/crowdsec-haproxy-bouncer/usr/lib/crowdsec/lua/
+	mkdir -p debian/crowdsec-haproxy-bouncer/var/lib/crowdsec/lua/templates/
+
+	cp -r lib/* debian/crowdsec-haproxy-bouncer/usr/lib/crowdsec/lua/
+	cp -r templates/* debian/crowdsec-haproxy-bouncer/var/lib/crowdsec/lua/templates/
+
+	cp community_blocklist.map debian/crowdsec-haproxy-bouncer/var/lib/crowdsec/lua/community_blocklist.map
+
+	mkdir -p debian/crowdsec-haproxy-bouncer/etc/crowdsec/bouncers/
+	cp crowdsec-haproxy-bouncer.conf debian/crowdsec-haproxy-bouncer/etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.conf
+
