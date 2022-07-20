@@ -1,11 +1,11 @@
 #!/bin/bash
 
 LUA_MOD_DIR="./lua-mod"
-LIB_PATH="/usr/local/lua/crowdsec/"
+LIB_PATH="/usr/local/lua/crowdsec/haproxy/"
 CONFIG_PATH="/etc/crowdsec/bouncers/"
 CONFIG_FILE="${CONFIG_PATH}crowdsec-haproxy-bouncer.conf"
 OLD_CONFIG_FILE="/etc/crowdsec/crowdsec-haproxy-bouncer.conf"
-DATA_PATH="/var/lib/crowdsec/lua/"
+DATA_PATH="/var/lib/crowdsec/lua/haproxy/"
 
 install() {
     mkdir -p ${LIB_PATH}/plugins/crowdsec/

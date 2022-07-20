@@ -12,6 +12,7 @@ release:
 	cp -r templates/* "${LUA_MOD_DIR}"/templates
 	
 	cp community_blocklist.map ${LUA_MOD_DIR}
+	cp crowdsec-haproxy-bouncer.conf ${LUA_MOD_DIR}
 
 	cp install.sh ${OUTDIR}
 	chmod +x ${OUTDIR}install.sh

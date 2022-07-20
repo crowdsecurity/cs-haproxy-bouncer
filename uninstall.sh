@@ -1,7 +1,7 @@
 #!/bin/bash
 
-LIB_PATH="/usr/local/lua/crowdsec/"
-DATA_PATH="/var/lib/crowdsec/lua/"
+LIB_PATH="/usr/local/lua/crowdsec/haproxy/"
+DATA_PATH="/var/lib/crowdsec/lua/haproxy/"
 SILENT="false"
 
 usage() {
