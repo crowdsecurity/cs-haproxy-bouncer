@@ -64,6 +64,10 @@ end
 -- Called for each request
 -- check the blocklists and decide of the remediation
 local function allow(txn)
+    if runtime.conf["ENABLED"] == "false" then
+        return remediate_allow(txn)
+    end
+
     local source_ip = txn.f:src()
 
     core.Debug("Request from "..source_ip)
@@ -75,10 +79,6 @@ local function allow(txn)
     end
 
     core.Debug("Active decision "..tostring(remediation).." for "..source_ip)
-
-    if runtime.conf["ENABLED"] == "false" then
-        return remediate_allow(txn)
-    end
 
     -- whitelists
     if utils.table_len(runtime.conf["EXCLUDE_LOCATION"]) > 0 then
@@ -187,6 +187,10 @@ end
 -- Task
 -- refresh decisions periodically
 local function refresh_decisions_task()
+    if runtime.conf["ENABLED"] == "false" then
+        return
+    end
+
     local is_first_fetch = true
     while true do
         local succes = refresh_decisions(is_first_fetch)
