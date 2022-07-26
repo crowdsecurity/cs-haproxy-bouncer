@@ -1,4 +1,4 @@
-Source: crowdsec-hproxy-bouncer
+Source: crowdsec-haproxy-bouncer
 Maintainer: Crowdsec Team <debian@crowdsec.net>
 Build-Depends: debhelper, bash
 
