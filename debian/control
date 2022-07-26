@@ -1,4 +1,4 @@
-Source: crowdsec-hproxy-bouncer
+Source: crowdsec-haproxy-bouncer
 Maintainer: Crowdsec Team <debian@crowdsec.net>
 Build-Depends: debhelper, bash
 
@@ -6,4 +6,4 @@ Package: crowdsec-haproxy-bouncer
 Provides: crowdsec-haproxy-bouncer
 Description: lua-based haproxy bouncer for Crowdsec
 Architecture: any
-
+Depends: lua
