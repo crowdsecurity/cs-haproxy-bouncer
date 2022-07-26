@@ -22,6 +22,7 @@ if [ "$1" = "configure" ]; then
         fi
 
         TMP=`mktemp -p /tmp/`
+        cp /etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.conf ${TMP}
         API_KEY=${API_KEY} envsubst < ${TMP} > /etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.conf
         rm ${TMP}
     fi
