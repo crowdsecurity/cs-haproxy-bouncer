@@ -17,7 +17,7 @@ override_dh_auto_install:
 	mkdir -p debian/crowdsec-haproxy-bouncer/usr/lib/crowdsec/lua/haproxy/
 	mkdir -p debian/crowdsec-haproxy-bouncer/var/lib/crowdsec/lua/haproxy/templates/
 
-	cp -r lib/* debian/crowdsec-haproxy-bouncer/usr/lib/crowdsec/lua/
+	cp -r lib/* debian/crowdsec-haproxy-bouncer/usr/lib/crowdsec/lua/haproxy/
 	cp -r templates/* debian/crowdsec-haproxy-bouncer/var/lib/crowdsec/lua/haproxy/templates/
 
 	cp community_blocklist.map debian/crowdsec-haproxy-bouncer/var/lib/crowdsec/lua/haproxy/community_blocklist.map

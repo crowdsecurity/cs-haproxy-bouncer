@@ -1,7 +1,7 @@
 #!/bin/bash
 
 LUA_MOD_DIR="./lua-mod"
-LIB_PATH="/usr/local/lua/crowdsec/haproxy/"
+LIB_PATH="/usr/local/crowdsec/lua/haproxy/"
 CONFIG_PATH="/etc/crowdsec/bouncers/"
 DATA_PATH="/var/lib/crowdsec/lua/haproxy/"
 SILENT="false"
