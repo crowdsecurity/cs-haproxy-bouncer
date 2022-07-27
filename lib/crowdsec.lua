@@ -61,6 +61,43 @@ local function remediate_fallback(txn)
     return nil
 end
 
+-- Called in live mode
+-- interrogate Crowdsec in realtime to get a decision
+local function get_live_remediation(txn, source_ip)
+    local link = "http://" .. core.backends["crowdsec"].servers["crowdsec"]:get_addr() .. "/v1/decisions?ip=" .. source_ip
+
+    core.Debug("Fetching decision for ip="..source_ip)
+    local response = core.httpclient():get{
+        url=link,
+        headers={
+            ["X-Api-Key"]={runtime.conf["API_KEY"]},
+            ["Connection"]={"keep-alive"},
+            ["User-Agent"]={"crowdsec-haproxy-bouncer/v1.0.0"}
+        },
+        timeout=2*60*1000
+    }
+    core.Info("Response: "..tostring(response.status).." ("..response.body..")")
+    if response == nil then
+        core.Alert("Got error fetching decisions from Crowdsec (unknown)")
+        return nil
+    end
+    if response.status ~= 200 then
+        core.Alert("Got error fetching decisions from Crowdsec: "..tostring(response.status).." ("..response.body..")")
+        return nil
+    end
+    local body = response.body
+    core.Debug("Decision fetched ip="..source_ip.."="..tostring(body))
+
+    if body == "null" then
+        -- ip unknown
+        return nil
+    end
+
+    local decisions = json.decode(body)
+
+    return decisions[1].type
+end
+
 -- Called for each request
 -- check the blocklists and decide of the remediation
 local function allow(txn)
@@ -72,7 +109,12 @@ local function allow(txn)
 
     core.Debug("Request from "..source_ip)
 
-    local remediation = runtime.map:lookup(source_ip)
+    local remediation = nil
+    if runtime.conf["MODE"] == "stream" then
+        remediation = runtime.map:lookup(source_ip)
+    else
+        remediation = get_live_remediation(txn, source_ip)
+    end
 
     if remediation == nil then
         return remediate_allow(txn)
@@ -148,7 +190,7 @@ local function refresh_decisions(is_startup)
         core.Alert("Got error fetching decisions from Crowdsec (unknown)")
         return false
     end
-    if response == nil or response.status ~= 200 then
+    if response.status ~= 200 then
         core.Alert("Got error fetching decisions from Crowdsec: "..response.status.." ("..response.body..")")
         return false
     end
@@ -188,6 +230,10 @@ end
 -- refresh decisions periodically
 local function refresh_decisions_task()
     if runtime.conf["ENABLED"] == "false" then
+        return
+    end
+
+    if runtime.conf["MODE"] ~= "stream" then
         return
     end
 
