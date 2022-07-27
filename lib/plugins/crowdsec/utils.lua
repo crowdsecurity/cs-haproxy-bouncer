@@ -44,7 +44,6 @@ function M.accept_html(applet)
       return true
    end
    for _, accept in pairs(applet.headers["accept"]) do
-      core.Info(tostring(accept))
       for _, value in pairs({"*/*", "text", "html"}) do
          local found_min, found_max = string.find(accept, value)
          if found_min ~= nil then

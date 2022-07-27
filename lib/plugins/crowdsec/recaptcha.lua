@@ -130,7 +130,11 @@ function M.ReplyCaptcha(applet)
     return
   end
 
-  local response = M.GetTemplate({["redirect_uri"]=applet.path})
+  local redirect_uri = applet.path
+  if applet.method:lower() ~= "get" then
+    redirect_uri = "/"
+  end
+  local response = M.GetTemplate({["redirect_uri"]=redirect_uri})
   applet:set_status(200)
   applet:add_header("content-length", string.len(response))
   applet:add_header("content-type", "text/html")
