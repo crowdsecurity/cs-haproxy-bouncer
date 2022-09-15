@@ -64,6 +64,21 @@ end
 -- Called in live mode
 -- interrogate Crowdsec in realtime to get a decision
 local function get_live_remediation(txn, source_ip)
+    -- check in cache
+    remediation_exp = runtime.map:lookup(source_ip)
+    time_now = os.time()
+    if remediation_exp ~= nil then
+        -- extract expiration
+        for remediation, expiration in string.gmatch(remediation_exp, "(%w+),(%d+)") do
+            if expiration ~= nil and tonumber(expiration) >= time_now then
+                if remediation == "null" then
+                    return nil
+                end
+                return remediation
+            end
+        end
+    end
+
     local link = "http://" .. core.backends["crowdsec"].servers["crowdsec"]:get_addr() .. "/v1/decisions?ip=" .. source_ip
 
     core.Debug("Fetching decision for ip="..source_ip)
@@ -76,7 +91,7 @@ local function get_live_remediation(txn, source_ip)
         },
         timeout=2*60*1000
     }
-    core.Info("Response: "..tostring(response.status).." ("..response.body..")")
+    core.Debug("Response: "..tostring(response.status).." ("..response.body..")")
     if response == nil then
         core.Alert("Got error fetching decisions from Crowdsec (unknown)")
         return nil
@@ -90,10 +105,14 @@ local function get_live_remediation(txn, source_ip)
 
     if body == "null" then
         -- ip unknown
+        core.set_map(runtime.conf["MAP_PATH"], source_ip, string.format("null,%d", time_now+runtime.conf["CACHE_EXPIRATION"]))
         return nil
     end
 
     local decisions = json.decode(body)
+
+    -- add to cache
+    core.set_map(runtime.conf["MAP_PATH"], source_ip, string.format("%s,%d", decisions[1].type, time_now+runtime.conf["CACHE_EXPIRATION"]))
 
     return decisions[1].type
 end

@@ -51,6 +51,7 @@ function config.loadConfig(file)
         ['MODE'] = "stream",
         ['UPDATE_FREQUENCY'] = 10,
         ['CAPTCHA_EXPIRATION'] = 3600,
+        ['CACHE_EXPIRATION'] = 1,
         ['REDIRECT_LOCATION'] = "",
         ['EXCLUDE_LOCATION'] = {},
         ['RET_CODE'] = 0
