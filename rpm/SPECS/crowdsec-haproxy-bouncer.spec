@@ -25,27 +25,40 @@ BuildRequires:  make
 %prep
 %setup -n crowdsec-haproxy-bouncer-%{version}
 
-%build
-BUILD_VERSION=%{local_version} make
-TMP=`mktemp -p /tmp/`
-cp config/%{name}.service ${TMP}
-BIN=%{_bindir}/%{name} CFG=/etc/crowdsec/bouncers envsubst < ${TMP} > config/%{name}.service
-rm ${TMP}
-
 %install
 rm -rf %{buildroot}
-mkdir -p %{buildroot}/usr/bin
-install -m 755 -D %{name}  %{buildroot}%{_bindir}/%{name}
-install -m 600 -D config/%{name}.yaml %{buildroot}/etc/crowdsec/bouncers/%{name}.yaml 
-install -m 644 -D config/%{name}.service %{buildroot}%{_unitdir}/%{name}.service
+mkdir -p %{buildroot}%{_sysconfdir}/crowdsec/bouncers
+mkdir -p %{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy/templates/
+mkdir -p %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
 
+install -m 600 -D %{name}.yaml %{_sysconfdir}/crowdsec/bouncers/%{name}.yaml
+
+install -m 644 lib/crowdsec.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy
+install -m 644 lib/json.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy
+install -m 644 lib/plugins/crowdsec/recaptcha.luaw %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
+install -m 644 lib/plugins/crowdsec/template.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
+install -m 644 lib/plugins/crowdsec/config.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
+install -m 644 lib/plugins/crowdsec/ban.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
+install -m 644 lib/plugins/crowdsec/utils.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
+
+install -m 644 templates/captcha.html %{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy/templates/
+install -m 644 templates/ban.html %{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy/templates/
+install -m 644 community_blocklist.map %{buildroot}%{_libdir}/crowdsec/lua/haproxy
 %clean
 rm -rf %{buildroot}
 
 %files
-%defattr(-,root,root,-)
-/usr/bin/%{name}
-%{_unitdir}/%{name}.service
+%{buildroot}%{_libdir}/crowdsec/lua/haproxy/crowdsec.lua
+%{buildroot}%{_libdir}/crowdsec/lua/haproxy/json.lua
+%{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec/recaptcha.lua
+%{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec/template.lua
+%{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec/config.lua
+%{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec/ban.lua
+%{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec/utils.lua
+%{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy/templates/captcha.html
+%{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy/templates/ban.html
+%{buildroot}%{_libdir}/crowdsec/lua/haproxy/community_blocklist.map
+
 %config(noreplace) /etc/crowdsec/bouncers/%{name}.yaml 
 
 
