@@ -31,7 +31,7 @@ mkdir -p %{buildroot}%{_sysconfdir}/crowdsec/bouncers
 mkdir -p %{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy/templates/
 mkdir -p %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
 
-install -m 600 -D %{name}.yaml %{_sysconfdir}/crowdsec/bouncers/%{name}.conf
+install -m 600 -D %{name}.conf %{_sysconfdir}/crowdsec/bouncers/%{name}.conf
 
 install -m 644 lib/crowdsec.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy
 install -m 644 lib/json.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy
@@ -59,7 +59,7 @@ rm -rf %{buildroot}
 %{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy/templates/ban.html
 %{buildroot}%{_libdir}/crowdsec/lua/haproxy/community_blocklist.map
 
-%config(noreplace) /etc/crowdsec/bouncers/%{name}.conf
+%config(noreplace) /etc/crowdsec/bouncers/%{name}.yaml 
 
 
 %post -p /bin/bash
@@ -84,8 +84,8 @@ if [ "$?" -eq "0" ] ; then
     fi
 fi
 
-TMP=`mktemp -p /tmp/`
-cp /etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.yaml ${TMP}
+TMP=$(mktemp -p /tmp)
+cp /etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.conf ${TMP}
 API_KEY=${API_KEY} envsubst < ${TMP} > /etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.yaml
 rm ${TMP}
 
