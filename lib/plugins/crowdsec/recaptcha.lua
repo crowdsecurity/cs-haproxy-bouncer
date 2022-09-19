@@ -90,7 +90,7 @@ function M.Validate(g_captcha_res, remote_ip)
           url="https://"..verifier_ip..recaptcha_verify_path,
           body=data,
           headers={
-              ["Host"] = {"www.google.com"},
+              ["Host"] = {"www.recaptcha.net"},
               ["Content-Type"] = {"application/x-www-form-urlencoded"},
           },
           timeout=2000
