@@ -35,7 +35,7 @@ install -m 600 -D %{name}.conf %{_sysconfdir}/crowdsec/bouncers/%{name}.conf
 
 install -m 644 lib/crowdsec.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy
 install -m 644 lib/json.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy
-install -m 644 lib/plugins/crowdsec/recaptcha.luaw %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
+install -m 644 lib/plugins/crowdsec/recaptcha.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
 install -m 644 lib/plugins/crowdsec/template.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
 install -m 644 lib/plugins/crowdsec/config.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
 install -m 644 lib/plugins/crowdsec/ban.lua %{buildroot}%{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec
