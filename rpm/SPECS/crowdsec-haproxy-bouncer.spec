@@ -59,7 +59,7 @@ rm -rf %{buildroot}
 %{_sharedstatedir}/crowdsec/lua/haproxy/templates/ban.html
 %{_libdir}/crowdsec/lua/haproxy/community_blocklist.map
 
-%config(noreplace) %{_sysconfdir}/crowdsec/bouncers/%{name}.yaml 
+%config(noreplace) %{_sysconfdir}/crowdsec/bouncers/%{name}.conf
 
 
 %post -p /bin/bash
