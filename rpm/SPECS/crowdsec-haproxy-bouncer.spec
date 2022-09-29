@@ -11,6 +11,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  git
 BuildRequires:  make
 Requires: haproxy
+Requires: lua
 %{?fc33:BuildRequires: systemd-rpm-macros}
 
 %define debug_package %{nil}
