@@ -10,6 +10,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:  git
 BuildRequires:  make
+Requires: haproxy
 %{?fc33:BuildRequires: systemd-rpm-macros}
 
 %define debug_package %{nil}
@@ -43,7 +44,7 @@ install -m 644 lib/plugins/crowdsec/utils.lua %{buildroot}%{_libdir}/crowdsec/lu
 
 install -m 644 templates/captcha.html %{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy/templates/
 install -m 644 templates/ban.html %{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy/templates/
-install -m 644 community_blocklist.map %{buildroot}%{_libdir}/crowdsec/lua/haproxy
+install -m 644 community_blocklist.map %{buildroot}%{_sharedstatedir}/crowdsec/lua/haproxy
 %clean
 rm -rf %{buildroot}
 
@@ -57,7 +58,7 @@ rm -rf %{buildroot}
 %{_libdir}/crowdsec/lua/haproxy/plugins/crowdsec/utils.lua
 %{_sharedstatedir}/crowdsec/lua/haproxy/templates/captcha.html
 %{_sharedstatedir}/crowdsec/lua/haproxy/templates/ban.html
-%{_libdir}/crowdsec/lua/haproxy/community_blocklist.map
+%{_sharedstatedir}/crowdsec/lua/haproxy/community_blocklist.map
 
 %config(noreplace) %{_sysconfdir}/crowdsec/bouncers/%{name}.conf
 
