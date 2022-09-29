@@ -86,35 +86,18 @@ fi
 
 TMP=$(mktemp -p /tmp)
 cp /etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.conf ${TMP}
-API_KEY=${API_KEY} envsubst < ${TMP} > /etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.yaml
+API_KEY=${API_KEY} envsubst < ${TMP} > /etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.conf
 rm ${TMP}
 
 if [ ${START} -eq 0 ] ; then
     echo "no api key was generated, won't start service"
 fi
 
-echo "please enter the binary path in '/etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.yaml' and start the bouncer via 'sudo systemctl start crowdsec-haproxy-bouncer' "
+echo "Please configure '/etc/crowdsec/bouncers/crowdsec-haproxy-bouncer.conf' as you see fit"
 
 
  
 %changelog
-* Wed Jun 30 2021 Shivam Sandbhor <shivam@crowdsec.net>
+* Wed Sep 29 2022 Manuel Sabban <manuel@crowdsec.net>
 - First initial packaging
 
-%preun -p /bin/bash
-
-if [ "$1" == "0" ] ; then
-    systemctl stop crowdsec-haproxy-bouncer || echo "cannot stop service"
-    systemctl disable crowdsec-haproxy-bouncer || echo "cannot disable service"
-fi
-
-
-
-%postun -p /bin/bash
-
-if [ "$1" == "1" ] ; then
-    systemctl restart  crowdsec-haproxy-bouncer || echo "cannot restart service"
-elif [ "$1" == "0" ] ; then
-    systemctl stop crowdsec-haproxy-bouncer
-    systemctl disable crowdsec-custom-bouncer
-fi
