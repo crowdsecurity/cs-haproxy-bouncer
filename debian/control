@@ -5,6 +5,5 @@ Build-Depends: debhelper, bash
 Package: crowdsec-haproxy-bouncer
 Provides: crowdsec-haproxy-bouncer
 Description: lua-based haproxy bouncer for Crowdsec
-Depends: haproxy (>=2.5) lua
 Architecture: all
 
