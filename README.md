@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://github.com/crowdsecurity/cs-nginx-bouncer/raw/main/docs/assets/crowdsec_nginx.svg" alt="CrowdSec" title="CrowdSec" width="280" height="300" />
+<img src="https://github.com/crowdsecurity/cs-haproxy-bouncer/raw/main/docs/assets/crowdsec_haproxy.svg" alt="CrowdSec" title="CrowdSec" width="280" height="300" />
 </p>
 <p align="center">
 <img src="https://img.shields.io/badge/build-pass-green">
