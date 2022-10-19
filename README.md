@@ -25,4 +25,4 @@ New/unknown IP are checked against crowdsec API, and if request should be blocke
 
 # Installation
 
-Please follow the [official documentation](https://doc.crowdsec.net/docs/bouncers/haproxy).
+Please follow the [official documentation](https://doc.crowdsec.net/docs/next/bouncers/haproxy).
