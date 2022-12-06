@@ -228,6 +228,11 @@ local function refresh_decisions(is_startup)
         for i, decision in pairs(decisions.deleted) do
             core.Debug("Delete decision "..decision.value)
             core.del_map(runtime.conf["MAP_PATH"], decision.value)
+            -- This is very important: set_map takes an internal lock when called
+            -- If the bouncers gets a lot of IPs to delete, we will block the whole process
+            -- preventing it from answering any request, and the process will restart
+            -- after 30s.
+            core.msleep(1)
         end
       end
     end
@@ -238,6 +243,11 @@ local function refresh_decisions(is_startup)
         if runtime.conf["BOUNCING_ON_TYPE"] == decision.type or runtime.conf["BOUNCING_ON_TYPE"] == "all" then
             core.Debug("Add decision "..decision.value)
             core.set_map(runtime.conf["MAP_PATH"], decision.value, decision.type)
+            -- This is very important: set_map takes an internal lock when called
+            -- If the bouncers gets a lot of IPs, we will block the whole process
+            -- preventing it from answering any request, and the process will restart
+            -- after 30s.
+            core.msleep(1)
         end
       end
     end
