@@ -124,7 +124,18 @@ local function allow(txn)
         return remediate_allow(txn)
     end
 
-    local source_ip = txn.f:src()
+    local ip_from_header = runtime.conf["IP_FROM_HEADER"]
+    if ip_from_header == nil then
+	    source_ip = txn.f:src()
+    else
+        source_ip = txn.f:req_fhdr(ip_from_header)
+        if (source_ip == nil) then
+            source_ip = txn.f:src()
+            if (source_ip == nil) then
+                return default
+            end
+        end
+    end
 
     core.Debug("Request from "..source_ip)
 
