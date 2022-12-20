@@ -125,15 +125,13 @@ local function allow(txn)
     end
 
     local ip_from_header = runtime.conf["IP_FROM_HEADER"]
+    local source_ip
     if ip_from_header == nil then
-	    source_ip = txn.f:src()
+        source_ip = txn.f:src()
     else
         source_ip = txn.f:req_fhdr(ip_from_header)
         if (source_ip == nil) then
             source_ip = txn.f:src()
-            if (source_ip == nil) then
-                return default
-            end
         end
     end
 
