@@ -1,0 +1,5 @@
+source: docker
+container_name:
+ - example-nginx-server-1
+labels:
+  type: nginx
