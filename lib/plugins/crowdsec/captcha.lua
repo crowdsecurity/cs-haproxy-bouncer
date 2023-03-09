@@ -16,7 +16,7 @@ captcha_backend_host["hcaptcha"] = "hcaptcha.com"
 captcha_backend_host["turnstile"] = "challenges.cloudflare.com"
 
 local captcha_frontend_js = {}
-captcha_frontend_js["recaptcha"] = "https://www.google.com/recaptcha/api.js"
+captcha_frontend_js["recaptcha"] = "https://www.recaptcha.net/recaptcha/api.js"
 captcha_frontend_js["hcaptcha"] = "https://js.hcaptcha.com/1/api.js"
 captcha_frontend_js["turnstile"] = "https://challenges.cloudflare.com/turnstile/v0/api.js"
 
