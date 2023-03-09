@@ -5,7 +5,20 @@ local utils = require "plugins.crowdsec.utils"
 
 local M = {_TYPE='module', _NAME='recaptcha.funcs', _VERSION='1.0-0'}
 
-local recaptcha_verify_path = "/recaptcha/api/siteverify"
+local captcha_backend_url = {}
+captcha_backend_url["recaptcha"] = "https://www.google.com/recaptcha/api/siteverify"
+captcha_backend_url["hcaptcha"] = "https://hcaptcha.com/siteverify"
+captcha_backend_url["turnstile"] = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+local captcha_frontend_js = {}
+captcha_frontend_js["recaptcha"] = "https://www.google.com/recaptcha/api.js"
+captcha_frontend_js["hcaptcha"] = "https://js.hcaptcha.com/1/api.js"
+captcha_frontend_js["turnstile"] = "https://challenges.cloudflare.com/turnstile/v0/api.js"
+
+local captcha_frontend_key = {}
+captcha_frontend_key["recaptcha"] = "g-recaptcha"
+captcha_frontend_key["hcaptcha"] = "h-captcha"
+captcha_frontend_key["turnstile"] = "cf-turnstile"
 
 M._VERIFY_STATE = "to_verify"
 M._VALIDATED_STATE = "validated"
@@ -29,7 +42,7 @@ function M.GetStateID(state)
     return nil
 end
 
-function M.New(siteKey, secretKey, TemplateFilePath)
+function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
 
     if siteKey == nil or siteKey == "" then
       return "no recaptcha site key provided, can't use recaptcha"
@@ -59,15 +72,23 @@ function M.New(siteKey, secretKey, TemplateFilePath)
     if captcha_template == nil then
         return "Template file " .. TemplateFilePath .. "not found."
     end
-    M.Template = captcha_template
 
+    M.CaptchaProvider = captcha_provider
+    
+    local template_data = {}
+    template_data["captcha_site_key"] =  M.SiteKey
+    template_data["captcha_frontend_js"] = captcha_frontend_js[M.CaptchaProvider]
+    template_data["captcha_frontend_key"] = captcha_frontend_key[M.CaptchaProvider]
+    M.Template = template.compile(M.Template, template_data)    
     return nil
 end
 
-function M.GetTemplate(template_data)
-  template_data["recaptcha_site_key"] =  M.SiteKey
-  local view = template.compile(M.Template, template_data)
-  return view
+function M.GetTemplate()
+  return M.Template
+end
+
+function M.GetCaptchaBackendKey()
+  return captcha_frontend_key[M.CaptchaProvider] .. "-response"
 end
 
 local function table_to_encoded_url(args)
@@ -76,10 +97,10 @@ local function table_to_encoded_url(args)
     return table.concat(params, "&")
 end
 
-function M.Validate(g_captcha_res, remote_ip)
+function M.Validate(captcha_res, remote_ip)
     local body = {
         secret   = M.SecretKey,
-        response = g_captcha_res,
+        response = captcha_res,
         remoteip = remote_ip
     }
 
@@ -87,10 +108,9 @@ function M.Validate(g_captcha_res, remote_ip)
     local data = table_to_encoded_url(body)
     local status, res = pcall(function()
       return core.httpclient():post{
-          url="https://"..verifier_ip..recaptcha_verify_path,
+          url= captcha_backend_url[M.CaptchaProvider],
           body=data,
           headers={
-              ["Host"] = {"www.recaptcha.net"},
               ["Content-Type"] = {"application/x-www-form-urlencoded"},
           },
           timeout=2000
@@ -134,7 +154,7 @@ function M.ReplyCaptcha(applet)
   if applet.method:lower() ~= "get" then
     redirect_uri = "/"
   end
-  local response = M.GetTemplate({["redirect_uri"]=redirect_uri})
+  local response = M.GetTemplate()
   applet:set_status(200)
   applet:add_header("content-length", string.len(response))
   applet:add_header("content-type", "text/html")
