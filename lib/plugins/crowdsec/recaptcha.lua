@@ -118,7 +118,7 @@ function M.Validate(captcha_res, remote_ip)
           body=data,
           headers={
               ["Content-Type"] = {"application/x-www-form-urlencoded"},
-              ["host"] = {captcha_backend_host[M.CaptchaProvider]}
+              ["Host"] = {captcha_backend_host[M.CaptchaProvider]}
           },
           timeout=2000
       }
