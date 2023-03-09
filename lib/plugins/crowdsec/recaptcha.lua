@@ -6,9 +6,15 @@ local utils = require "plugins.crowdsec.utils"
 local M = {_TYPE='module', _NAME='recaptcha.funcs', _VERSION='1.0-0'}
 
 local captcha_backend_url = {}
-captcha_backend_url["recaptcha"] = "https://www.google.com/recaptcha/api/siteverify"
-captcha_backend_url["hcaptcha"] = "https://hcaptcha.com/siteverify"
-captcha_backend_url["turnstile"] = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+captcha_backend_url["recaptcha"] = "/recaptcha/api/siteverify"
+captcha_backend_url["hcaptcha"] = "/siteverify"
+captcha_backend_url["turnstile"] = "/turnstile/v0/siteverify"
+
+local captcha_backend_host = {}
+captcha_backend_host["recaptcha"] = "www.google.com"
+captcha_backend_host["google"] = "www.google.com"
+captcha_backend_host["hcaptcha"] = "www.hcaptcha.com"
+captcha_backend_host["turnstile"] = "challenges.cloudflare.com"
 
 local captcha_frontend_js = {}
 captcha_frontend_js["recaptcha"] = "https://www.google.com/recaptcha/api.js"
@@ -42,7 +48,7 @@ function M.GetStateID(state)
     return nil
 end
 
-function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
+function M.New(siteKey, secretKey, TemplateFilePath)
 
     if siteKey == nil or siteKey == "" then
       return "no recaptcha site key provided, can't use recaptcha"
@@ -61,6 +67,8 @@ function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
       return "no verifier backend provided, can't use recaptcha"
     end
 
+    local captcha_provider = core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr()
+    core.Debug("captcha provider: "..captcha_provider)
     if TemplateFilePath == nil then
       return "CAPTCHA_TEMPLATE_PATH variable is empty, will ban without template"
     end
@@ -79,7 +87,7 @@ function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
     template_data["captcha_site_key"] =  M.SiteKey
     template_data["captcha_frontend_js"] = captcha_frontend_js[M.CaptchaProvider]
     template_data["captcha_frontend_key"] = captcha_frontend_key[M.CaptchaProvider]
-    M.Template = template.compile(M.Template, template_data)    
+    M.Template = template.compile(captcha_template, template_data)    
     return nil
 end
 
@@ -106,12 +114,14 @@ function M.Validate(captcha_res, remote_ip)
 
     local verifier_ip = core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr()
     local data = table_to_encoded_url(body)
+    
     local status, res = pcall(function()
       return core.httpclient():post{
-          url= captcha_backend_url[M.CaptchaProvider],
+          url= "https://" .. verifier_ip .. captcha_backend_url[M.CaptchaProvider],
           body=data,
           headers={
               ["Content-Type"] = {"application/x-www-form-urlencoded"},
+              ["host"] = {captcha_backend_host[M.CaptchaProvider]}
           },
           timeout=2000
       }
