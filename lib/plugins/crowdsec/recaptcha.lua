@@ -52,11 +52,13 @@ function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
     if siteKey == nil or siteKey == "" then
       return "no recaptcha site key provided, can't use recaptcha"
     end
+    
     M.SiteKey = siteKey
 
     if secretKey == nil or secretKey == "" then
       return "no recaptcha secret key provided, can't use recaptcha"
     end
+    
     M.SecretKey = secretKey
 
     if core.backends["captcha_verifier"] == nil then
@@ -79,17 +81,16 @@ function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
     end
 
     M.CaptchaProvider = captcha_provider
-    
-    local template_data = {}
-    template_data["captcha_site_key"] =  M.SiteKey
-    template_data["captcha_frontend_js"] = captcha_frontend_js[M.CaptchaProvider]
-    template_data["captcha_frontend_key"] = captcha_frontend_key[M.CaptchaProvider]
-    M.Template = template.compile(captcha_template, template_data)    
+    M.Template = captcha_template
+
     return nil
 end
 
-function M.GetTemplate()
-  return M.Template
+function M.GetTemplate(template_data)
+  template_data["captcha_site_key"] =  M.SiteKey
+  template_data["captcha_frontend_js"] = captcha_frontend_js[M.CaptchaProvider]
+  template_data["captcha_frontend_key"] = captcha_frontend_key[M.CaptchaProvider]
+  return template.compile(M.Template, template_data)
 end
 
 function M.GetCaptchaBackendKey()
@@ -165,7 +166,7 @@ function M.ReplyCaptcha(applet)
   if applet.method:lower() ~= "get" then
     redirect_uri = "/"
   end
-  local response = M.GetTemplate()
+  local response = M.GetTemplate({redirect_uri=redirect_uri})
   applet:set_status(200)
   applet:add_header("content-length", string.len(response))
   applet:add_header("content-type", "text/html")

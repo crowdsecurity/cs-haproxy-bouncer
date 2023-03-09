@@ -18,6 +18,7 @@
         <h1 class="text-2xl lg:text-3xl xl:text-4xl">CrowdSec Captcha</h1>
         <form action="" method="POST" class="flex flex-col space-y-1" id="captcha-form">
           <div id="captcha" class="{{captcha_frontend_key}}" data-sitekey="{{captcha_site_key}}" data-callback="captchaCallback"></div>
+	  <input name="redirect_uri" type="hidden" value="{{redirect_uri}}">
         </form>
       </div>
       <div class="flex-col md:flex-row text-sm flex items-center">
