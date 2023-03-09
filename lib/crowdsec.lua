@@ -28,7 +28,7 @@ local function init()
     end
     
     runtime.captcha_ok = true
-    local err = captcha.New(runtime.conf["SITE_KEY"], runtime.conf["SECRET_KEY"], runtime.conf["CAPTCHA_TEMPLATE_PATH"])
+    local err = captcha.New(runtime.conf["SITE_KEY"], runtime.conf["SECRET_KEY"], runtime.conf["CAPTCHA_TEMPLATE_PATH"], runtime.conf["CAPTCHA_PROVIDER"])
     if err ~= nil then
       core.Alert("error loading captcha plugin: " .. err)
       runtime.captcha_ok = false

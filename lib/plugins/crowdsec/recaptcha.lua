@@ -11,8 +11,7 @@ captcha_backend_url["hcaptcha"] = "/siteverify"
 captcha_backend_url["turnstile"] = "/turnstile/v0/siteverify"
 
 local captcha_backend_host = {}
-captcha_backend_host["recaptcha"] = "www.google.com"
-captcha_backend_host["google"] = "www.google.com"
+captcha_backend_host["recaptcha"] = "www.recaptcha.net"
 captcha_backend_host["hcaptcha"] = "www.hcaptcha.com"
 captcha_backend_host["turnstile"] = "challenges.cloudflare.com"
 
@@ -48,7 +47,7 @@ function M.GetStateID(state)
     return nil
 end
 
-function M.New(siteKey, secretKey, TemplateFilePath)
+function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
 
     if siteKey == nil or siteKey == "" then
       return "no recaptcha site key provided, can't use recaptcha"
@@ -67,8 +66,6 @@ function M.New(siteKey, secretKey, TemplateFilePath)
       return "no verifier backend provided, can't use recaptcha"
     end
 
-    local captcha_provider = core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr()
-    core.Debug("captcha provider: "..captcha_provider)
     if TemplateFilePath == nil then
       return "CAPTCHA_TEMPLATE_PATH variable is empty, will ban without template"
     end
