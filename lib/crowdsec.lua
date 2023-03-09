@@ -2,7 +2,7 @@ package.path = package.path .. ";./?.lua"
 
 local json = require "json"
 local config = require "plugins.crowdsec.config"
-local captcha = require "plugins.crowdsec.recaptcha"
+local captcha = require "plugins.crowdsec.captcha"
 local ban = require "plugins.crowdsec.ban"
 local utils = require "plugins.crowdsec.utils"
 
