@@ -12,7 +12,7 @@ captcha_backend_url["turnstile"] = "/turnstile/v0/siteverify"
 
 local captcha_backend_host = {}
 captcha_backend_host["recaptcha"] = "www.recaptcha.net"
-captcha_backend_host["hcaptcha"] = "www.hcaptcha.com"
+captcha_backend_host["hcaptcha"] = "hcaptcha.com"
 captcha_backend_host["turnstile"] = "challenges.cloudflare.com"
 
 local captcha_frontend_js = {}
@@ -130,6 +130,10 @@ function M.Validate(captcha_res, remote_ip)
 
     if res.status ~= 200 then
       core.Alert("error verifying captcha: "..res.status..","..res.body.."; verifier: "..verifier_ip)
+      return false, res.body
+    end
+    if res.body:sub(1,1) ~= "{" then
+      core.Alert("error recieved non json response: "..res.body)
       return false, res.body
     end
     local result = json.decode(res.body)
