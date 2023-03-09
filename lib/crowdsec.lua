@@ -172,7 +172,7 @@ local function allow(txn)
         end
         -- captcha response ?
         local captcha_resp = txn.sf:req_body_param(captcha.GetCaptchaBackendKey())
-        if recaptcha_resp ~= "" then
+        if captcha_resp ~= "" then
             valid, err = captcha.Validate(captcha_resp, source_ip)
             if err then
                 core.Alert("error validating captcha: "..err.."; validator: "..core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr())
