@@ -7,21 +7,25 @@ local M = {_TYPE='module', _NAME='recaptcha.funcs', _VERSION='1.0-0'}
 
 local captcha_backend_url = {}
 captcha_backend_url["recaptcha"] = "/recaptcha/api/siteverify"
+captcha_backend_url["captcha"] = "/recaptcha/api/siteverify"
 captcha_backend_url["hcaptcha"] = "/siteverify"
 captcha_backend_url["turnstile"] = "/turnstile/v0/siteverify"
 
 local captcha_backend_host = {}
 captcha_backend_host["recaptcha"] = "www.recaptcha.net"
+captcha_backend_host["captcha"] = "www.recaptcha.net"
 captcha_backend_host["hcaptcha"] = "hcaptcha.com"
 captcha_backend_host["turnstile"] = "challenges.cloudflare.com"
 
 local captcha_frontend_js = {}
 captcha_frontend_js["recaptcha"] = "https://www.recaptcha.net/recaptcha/api.js"
+captcha_frontend_js["captcha"] = "https://www.recaptcha.net/recaptcha/api.js"
 captcha_frontend_js["hcaptcha"] = "https://js.hcaptcha.com/1/api.js"
 captcha_frontend_js["turnstile"] = "https://challenges.cloudflare.com/turnstile/v0/api.js"
 
 local captcha_frontend_key = {}
 captcha_frontend_key["recaptcha"] = "g-recaptcha"
+captcha_frontend_key["captcha"] = "g-recaptcha"
 captcha_frontend_key["hcaptcha"] = "h-captcha"
 captcha_frontend_key["turnstile"] = "cf-turnstile"
 
@@ -60,14 +64,19 @@ function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
     end
     
     M.SecretKey = secretKey
+    
+-- for loop over core.backends
 
     if core.backends["captcha_verifier"] == nil then
       return "no verifier backend provided, can't use recaptcha"
     end
-    if core.backends["captcha_verifier"].servers["captcha_verifier"] == nil then
+    for k, v in pairs(core.backends["captcha_verifier"].servers) do
+     	M.CaptchaProvider = utils.split(v.name, "_")[1]
+	M.CaptchaServerName = v.name
+    end
+    if M.CaptchaProvider == nil then
       return "no verifier backend provided, can't use recaptcha"
     end
-
     if TemplateFilePath == nil then
       return "CAPTCHA_TEMPLATE_PATH variable is empty, will ban without template"
     end
@@ -80,7 +89,6 @@ function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
         return "Template file " .. TemplateFilePath .. "not found."
     end
 
-    M.CaptchaProvider = captcha_provider
     M.Template = captcha_template
 
     return nil
@@ -110,7 +118,7 @@ function M.Validate(captcha_res, remote_ip)
         remoteip = remote_ip
     }
 
-    local verifier_ip = core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr()
+    local verifier_ip = core.backends["captcha_verifier"].servers[M.CaptchaServerName]:get_addr()
     local data = table_to_encoded_url(body)
     
     local status, res = pcall(function()
