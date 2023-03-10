@@ -51,16 +51,15 @@ function M.GetStateID(state)
     return nil
 end
 
-function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
-
+function M.New(siteKey, secretKey, TemplateFilePath)
     if siteKey == nil or siteKey == "" then
-      return "no recaptcha site key provided, can't use recaptcha"
+      return "no recaptcha site key provided, can't use captcha"
     end
     
     M.SiteKey = siteKey
 
     if secretKey == nil or secretKey == "" then
-      return "no recaptcha secret key provided, can't use recaptcha"
+      return "no recaptcha secret key provided, can't use captcha"
     end
     
     M.SecretKey = secretKey
@@ -68,20 +67,20 @@ function M.New(siteKey, secretKey, TemplateFilePath, captcha_provider)
 -- for loop over core.backends
 
     if core.backends["captcha_verifier"] == nil then
-      return "no verifier backend provided, can't use recaptcha"
+      return "no verifier backend provided, can't use captcha"
     end
     for k, v in pairs(core.backends["captcha_verifier"].servers) do
      	M.CaptchaProvider = utils.split(v.name, "_")[1]
 	M.CaptchaServerName = v.name
     end
     if M.CaptchaProvider == nil then
-      return "no verifier backend provided, can't use recaptcha"
+      return "no verifier backend provided, can't use captcha"
     end
     if TemplateFilePath == nil then
       return "CAPTCHA_TEMPLATE_PATH variable is empty, will ban without template"
     end
     if utils.file_exist(TemplateFilePath) == false then
-      return "captcha template file doesn't exist, can't use recaptcha"
+      return "captcha template file doesn't exist, can't use captcha"
     end
 
     local captcha_template = utils.read_file(TemplateFilePath)
