@@ -5,7 +5,29 @@ local utils = require "plugins.crowdsec.utils"
 
 local M = {_TYPE='module', _NAME='recaptcha.funcs', _VERSION='1.0-0'}
 
-local recaptcha_verify_path = "/recaptcha/api/siteverify"
+local captcha_backend_url = {}
+captcha_backend_url["recaptcha"] = "/recaptcha/api/siteverify"
+captcha_backend_url["captcha"] = "/recaptcha/api/siteverify"
+captcha_backend_url["hcaptcha"] = "/siteverify"
+captcha_backend_url["turnstile"] = "/turnstile/v0/siteverify"
+
+local captcha_backend_host = {}
+captcha_backend_host["recaptcha"] = "www.recaptcha.net"
+captcha_backend_host["captcha"] = "www.recaptcha.net"
+captcha_backend_host["hcaptcha"] = "hcaptcha.com"
+captcha_backend_host["turnstile"] = "challenges.cloudflare.com"
+
+local captcha_frontend_js = {}
+captcha_frontend_js["recaptcha"] = "https://www.recaptcha.net/recaptcha/api.js"
+captcha_frontend_js["captcha"] = "https://www.recaptcha.net/recaptcha/api.js"
+captcha_frontend_js["hcaptcha"] = "https://js.hcaptcha.com/1/api.js"
+captcha_frontend_js["turnstile"] = "https://challenges.cloudflare.com/turnstile/v0/api.js"
+
+local captcha_frontend_key = {}
+captcha_frontend_key["recaptcha"] = "g-recaptcha"
+captcha_frontend_key["captcha"] = "g-recaptcha"
+captcha_frontend_key["hcaptcha"] = "h-captcha"
+captcha_frontend_key["turnstile"] = "cf-turnstile"
 
 M._VERIFY_STATE = "to_verify"
 M._VALIDATED_STATE = "validated"
@@ -30,44 +52,56 @@ function M.GetStateID(state)
 end
 
 function M.New(siteKey, secretKey, TemplateFilePath)
-
     if siteKey == nil or siteKey == "" then
-      return "no recaptcha site key provided, can't use recaptcha"
+      return "no recaptcha site key provided, can't use captcha"
     end
+    
     M.SiteKey = siteKey
 
     if secretKey == nil or secretKey == "" then
-      return "no recaptcha secret key provided, can't use recaptcha"
+      return "no recaptcha secret key provided, can't use captcha"
     end
+    
     M.SecretKey = secretKey
+    
+-- for loop over core.backends
 
     if core.backends["captcha_verifier"] == nil then
-      return "no verifier backend provided, can't use recaptcha"
+      return "no verifier backend provided, can't use captcha"
     end
-    if core.backends["captcha_verifier"].servers["captcha_verifier"] == nil then
-      return "no verifier backend provided, can't use recaptcha"
+    for k, v in pairs(core.backends["captcha_verifier"].servers) do
+     	M.CaptchaProvider = utils.split(v.name, "_")[1]
+	M.CaptchaServerName = v.name
     end
-
+    if M.CaptchaProvider == nil then
+      return "no verifier backend provided, can't use captcha"
+    end
     if TemplateFilePath == nil then
       return "CAPTCHA_TEMPLATE_PATH variable is empty, will ban without template"
     end
     if utils.file_exist(TemplateFilePath) == false then
-      return "captcha template file doesn't exist, can't use recaptcha"
+      return "captcha template file doesn't exist, can't use captcha"
     end
 
     local captcha_template = utils.read_file(TemplateFilePath)
     if captcha_template == nil then
         return "Template file " .. TemplateFilePath .. "not found."
     end
+
     M.Template = captcha_template
 
     return nil
 end
 
 function M.GetTemplate(template_data)
-  template_data["recaptcha_site_key"] =  M.SiteKey
-  local view = template.compile(M.Template, template_data)
-  return view
+  template_data["captcha_site_key"] =  M.SiteKey
+  template_data["captcha_frontend_js"] = captcha_frontend_js[M.CaptchaProvider]
+  template_data["captcha_frontend_key"] = captcha_frontend_key[M.CaptchaProvider]
+  return template.compile(M.Template, template_data)
+end
+
+function M.GetCaptchaBackendKey()
+  return captcha_frontend_key[M.CaptchaProvider] .. "-response"
 end
 
 local function table_to_encoded_url(args)
@@ -76,22 +110,23 @@ local function table_to_encoded_url(args)
     return table.concat(params, "&")
 end
 
-function M.Validate(g_captcha_res, remote_ip)
+function M.Validate(captcha_res, remote_ip)
     local body = {
         secret   = M.SecretKey,
-        response = g_captcha_res,
+        response = captcha_res,
         remoteip = remote_ip
     }
 
-    local verifier_ip = core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr()
+    local verifier_ip = core.backends["captcha_verifier"].servers[M.CaptchaServerName]:get_addr()
     local data = table_to_encoded_url(body)
+    
     local status, res = pcall(function()
       return core.httpclient():post{
-          url="https://"..verifier_ip..recaptcha_verify_path,
+          url= "https://" .. verifier_ip .. captcha_backend_url[M.CaptchaProvider],
           body=data,
           headers={
-              ["Host"] = {"www.recaptcha.net"},
               ["Content-Type"] = {"application/x-www-form-urlencoded"},
+              ["Host"] = {captcha_backend_host[M.CaptchaProvider]}
           },
           timeout=2000
       }
@@ -103,6 +138,10 @@ function M.Validate(g_captcha_res, remote_ip)
 
     if res.status ~= 200 then
       core.Alert("error verifying captcha: "..res.status..","..res.body.."; verifier: "..verifier_ip)
+      return false, res.body
+    end
+    if res.body:sub(1,1) ~= "{" then
+      core.Alert("error recieved non json response: "..res.body)
       return false, res.body
     end
     local result = json.decode(res.body)

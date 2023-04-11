@@ -2,7 +2,7 @@ package.path = package.path .. ";./?.lua"
 
 local json = require "json"
 local config = require "plugins.crowdsec.config"
-local recaptcha = require "plugins.crowdsec.recaptcha"
+local captcha = require "plugins.crowdsec.captcha"
 local ban = require "plugins.crowdsec.ban"
 local utils = require "plugins.crowdsec.utils"
 
@@ -28,9 +28,9 @@ local function init()
     end
     
     runtime.captcha_ok = true
-    local err = recaptcha.New(runtime.conf["SITE_KEY"], runtime.conf["SECRET_KEY"], runtime.conf["CAPTCHA_TEMPLATE_PATH"])
+    local err = captcha.New(runtime.conf["SITE_KEY"], runtime.conf["SECRET_KEY"], runtime.conf["CAPTCHA_TEMPLATE_PATH"])
     if err ~= nil then
-      core.Alert("error loading recaptcha plugin: " .. err)
+      core.Alert("error loading captcha plugin: " .. err)
       runtime.captcha_ok = false
     end
 
@@ -171,9 +171,9 @@ local function allow(txn)
             return remediate_allow(txn)
         end
         -- captcha response ?
-        local recaptcha_resp = txn.sf:req_body_param("g-recaptcha-response")
-        if recaptcha_resp ~= "" then
-            valid, err = recaptcha.Validate(recaptcha_resp, source_ip)
+        local captcha_resp = txn.sf:req_body_param(captcha.GetCaptchaBackendKey())
+        if captcha_resp ~= "" then
+            valid, err = captcha.Validate(captcha_resp, source_ip)
             if err then
                 core.Alert("error validating captcha: "..err.."; validator: "..core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr())
             end
@@ -279,6 +279,6 @@ end
 -- Registers
 core.register_init(init)
 core.register_action("crowdsec_allow", { 'tcp-req', 'tcp-res', 'http-req', 'http-res' }, allow, 0)
-core.register_service("reply_captcha", "http", recaptcha.ReplyCaptcha)
+core.register_service("reply_captcha", "http", captcha.ReplyCaptcha)
 core.register_service("reply_ban", "http", ban.ReplyBan)
 core.register_task(refresh_decisions_task)
