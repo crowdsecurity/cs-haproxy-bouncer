@@ -175,7 +175,7 @@ local function allow(txn)
         if captcha_resp ~= "" then
             valid, err = captcha.Validate(captcha_resp, source_ip)
             if err then
-                core.Alert("error validating captcha: "..err.."; validator: "..core.backends["captcha_verifier"].servers["captcha_verifier"]:get_addr())
+                core.Alert("error validating captcha: "..err.."; validator: "..core.backends["captcha_verifier"].servers[captcha.CaptchaServerName]:get_addr())
             end
             if valid then
                 -- valid, redirect to redirectUri
