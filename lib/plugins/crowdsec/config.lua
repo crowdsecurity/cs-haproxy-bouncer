@@ -40,7 +40,7 @@ function config.loadConfig(file)
         return nil, "File ".. file .." doesn't exist"
     end
     local conf = {}
-    local valid_params = {'ENABLED', 'API_URL', 'API_KEY', 'MAP_PATH', 'BOUNCING_ON_TYPE', 'MODE', 'SECRET_KEY', 'SITE_KEY', 'BAN_TEMPLATE_PATH' ,'CAPTCHA_TEMPLATE_PATH', 'REDIRECT_LOCATION', 'RET_CODE', 'EXCLUDE_LOCATION', 'FALLBACK_REMEDIATION'}
+    local valid_params = {'ENABLED', 'API_URL', 'API_KEY', 'MAP_PATH', 'BOUNCING_ON_TYPE', 'MODE', 'SECRET_KEY', 'SITE_KEY', 'BAN_TEMPLATE_PATH' ,'CAPTCHA_TEMPLATE_PATH', 'REDIRECT_LOCATION', 'RET_CODE', 'EXCLUDE_LOCATION', 'FALLBACK_REMEDIATION', 'CAPTCHA_PROVIDER'}
     local valid_int_params = {'HAPROXY_ADMIN_PORT', 'CACHE_EXPIRATION', 'CACHE_SIZE', 'REQUEST_TIMEOUT', 'UPDATE_FREQUENCY', 'CAPTCHA_EXPIRATION'}
     local valid_bouncing_on_type_values = {'ban', 'captcha', 'all'}
     local valid_truefalse_values = {'false', 'true'}
@@ -54,7 +54,8 @@ function config.loadConfig(file)
         ['CACHE_EXPIRATION'] = 1,
         ['REDIRECT_LOCATION'] = "",
         ['EXCLUDE_LOCATION'] = {},
-        ['RET_CODE'] = 0
+        ['RET_CODE'] = 0,
+        ['CAPTCHA_PROVIDER'] = 'recaptcha'
     }
     for line in io.lines(file) do
         local isOk = false
