@@ -55,15 +55,15 @@ function M.New(siteKey, secretKey, TemplateFilePath)
     if siteKey == nil or siteKey == "" then
       return "no recaptcha site key provided, can't use captcha"
     end
-    
+
     M.SiteKey = siteKey
 
     if secretKey == nil or secretKey == "" then
       return "no recaptcha secret key provided, can't use captcha"
     end
-    
+
     M.SecretKey = secretKey
-    
+
 -- for loop over core.backends
 
     if core.backends["captcha_verifier"] == nil then
@@ -119,10 +119,9 @@ function M.Validate(captcha_res, remote_ip)
 
     local verifier_ip = core.backends["captcha_verifier"].servers[M.CaptchaServerName]:get_addr()
     local data = table_to_encoded_url(body)
-    
     local status, res = pcall(function()
       return core.httpclient():post{
-          url= "https://" .. verifier_ip .. captcha_backend_url[M.CaptchaProvider],
+          url= "https://" .. captcha_backend_host[M.CaptchaProvider]  .. captcha_backend_url[M.CaptchaProvider],
           body=data,
           headers={
               ["Content-Type"] = {"application/x-www-form-urlencoded"},
@@ -152,7 +151,7 @@ function M.Validate(captcha_res, remote_ip)
           core.Alert("reCaptcha secret key is invalid")
           return true, nil
         end
-      end 
+      end
     end
 
     return result.success, nil
