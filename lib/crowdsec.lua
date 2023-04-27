@@ -170,6 +170,15 @@ local function allow(txn)
         if stk:lookup(source_ip) ~= nil then
             return remediate_allow(txn)
         end
+
+        if txn.sf:method() == "POST" then
+            local count = 0
+            while tonumber(txn.sf:req_body_len()) == 0 and count < 10 do
+                core.msleep(50)
+                count = count + 1
+            end
+        end
+
         -- captcha response ?
         local captcha_resp = txn.sf:req_body_param(captcha.GetCaptchaBackendKey())
         if captcha_resp ~= "" then
