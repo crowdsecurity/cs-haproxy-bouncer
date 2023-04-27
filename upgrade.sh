@@ -14,7 +14,7 @@ install() {
     cp -r ${LUA_MOD_DIR}/lib/* ${LIB_PATH}/
     cp -r ${LUA_MOD_DIR}/templates/* ${DATA_PATH}/templates/
 
-    if [ ! -f ${LUA_MOD_DIR}/community_blocklist.map ]
+    if [ ! -f ${LUA_MOD_DIR}/community_blocklist.map ]; then
         cp ${LUA_MOD_DIR}/community_blocklist.map ${DATA_PATH}
     fi
 }
@@ -31,7 +31,7 @@ migrate_conf() {
 }
 
 if ! [ $(id -u) = 0 ]; then
-    log_err "Please run the upgrade script as root or with sudo"
+    echo "Please run the upgrade script as root or with sudo"
     exit 1
 fi
 
