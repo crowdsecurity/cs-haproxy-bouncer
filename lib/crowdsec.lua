@@ -115,23 +115,19 @@ local function get_live_remediation(txn, source_ip)
     core.Debug("Checking all decisions for ip="..source_ip)
     for i, decision in pairs(decisions) do
         --parse all decisions for that ip
-        if decision.type == "captcha" then
-            if decisType ~= "ban" then
-                decisType = decision.type
-                core.Debug("Captcha descision found")
-            end
-        end
-        --priority to ban decision
+        decisType = decision.type
         if decision.type == "ban" then
-            decisType = "ban"
             core.Debug("Ban descision found")
+            break
         end
+        core.Debug("Captcha descision found")
+        --priority to ban decision
         core.msleep(1)
     end
+
     -- add to cache
     core.set_map(runtime.conf["MAP_PATH"], source_ip, string.format("%s,%d", decisions[1].type, time_now+runtime.conf["CACHE_EXPIRATION"]))
-
-    core.Debug("Decision adopted for "..source_ip.." is "..decisType)
+    
     return decisType
 end
 
